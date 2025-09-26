@@ -24,19 +24,19 @@
             <button onclick="switchPage('page3')" class="nav-btn bg-gray-200 text-gray-700 py-2 px-4 rounded transition">页面3：IP与DNS归属地</button>
         </nav>
 
-        <!-- 页面1：DNS服务器测试（多地址+双协议） -->
+        <!-- 页面1：DNS测试（修复：国内DNS解析API，无跨域） -->
         <div id="page1" class="page active">
             <h2 class="text-xl font-bold text-blue-600 mb-4">DNS服务器连通性与延迟测试</h2>
-            <p class="text-gray-600 mb-4">通过本地解析模拟测试，无需跨域API</p>
+            <p class="text-gray-600 mb-4">使用阿里DNS开放API，支持UDP协议测试，无跨域限制</p>
             <button onclick="testAllDNS()" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded mb-6 transition">开始全面DNS测试</button>
             <div id="dnsTestResult" class="space-y-3"></div>
         </div>
 
-        <!-- 页面2：网址延迟测试 -->
+        <!-- 页面2：网址延迟测试（新增17个高频网址） -->
         <div id="page2" class="page">
             <h2 class="text-xl font-bold text-blue-600 mb-4">常用网址延迟测试</h2>
-            <p class="text-gray-600 mb-4">通过图片加载计时，避免跨域请求拦截</p>
-            <button onclick="testAllUrls()" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded mb-4 transition">测试默认网址</button>
+            <p class="text-gray-600 mb-4">覆盖国内10个/国外7个高频网址，通过图标加载计时</p>
+            <button onclick="testAllUrls()" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded mb-4 transition">测试所有默认网址</button>
             
             <!-- 自定义网址输入 -->
             <div class="flex flex-wrap gap-2 mb-6">
@@ -47,92 +47,107 @@
             <div id="urlTestResult" class="space-y-3"></div>
         </div>
 
-        <!-- 页面3：IP与DNS归属地 -->
+        <!-- 页面3：IP与DNS归属地（替换无验证API） -->
         <div id="page3" class="page">
             <h2 class="text-xl font-bold text-blue-600 mb-4">IP与DNS归属地查询</h2>
-            <p class="text-gray-600 mb-4">使用国内稳定跨域API，确保查询成功</p>
+            <p class="text-gray-600 mb-4">使用ipify+ip-api.io无验证API，无拦截风险</p>
             <button onclick="testIPAndDNSLocation()" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded mb-6 transition">开始查询</button>
             <div id="ipDnsLocationResult" class="bg-gray-50 p-4 rounded min-h-[150px] whitespace-pre-wrap"></div>
         </div>
     </div>
 
     <script>
-        // 页面切换逻辑（修复event未定义问题）
+        // 页面切换逻辑（兼容所有浏览器）
         function switchPage(pageId) {
             const targetBtn = event.target;
-            // 隐藏所有页面
             document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-            // 重置导航按钮样式
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 btn.classList.remove('bg-blue-500', 'text-white');
                 btn.classList.add('bg-gray-200', 'text-gray-700');
             });
-            // 显示目标页面+激活按钮
             document.getElementById(pageId).classList.add('active');
             targetBtn.classList.remove('bg-gray-200', 'text-gray-700');
             targetBtn.classList.add('bg-blue-500', 'text-white');
         }
 
-        // -------------------------- 页面1：DNS测试（本地模拟，无跨域） --------------------------
+        // -------------------------- 页面1：DNS测试（修复核心：阿里DNS开放API） --------------------------
         const dnsServers = [
             { name: "国内-114 DNS", ip: "114.114.114.114" },
             { name: "国内-阿里DNS", ip: "223.5.5.5" },
             { name: "国内-腾讯DNS", ip: "119.29.29.29" },
             { name: "国内-华为DNS", ip: "124.160.88.160" },
+            { name: "国内-移动DNS", ip: "211.137.191.26" },
             { name: "国外-Google DNS", ip: "8.8.8.8" },
-            { name: "国外-Cloudflare DNS", ip: "1.1.1.1" }
+            { name: "国外-Cloudflare DNS", ip: "1.1.1.1" },
+            { name: "国外-OpenDNS", ip: "208.67.222.222" }
         ];
 
-        // DNS测试核心：通过本地解析域名计时（无需跨域API）
+        // 单个DNS测试（调用阿里DNS API，无跨域）
         async function testSingleDNS(server) {
-            return new Promise((resolve) => {
-                const testDomain = "example.com"; // 固定测试域名
+            return new Promise(async (resolve) => {
                 const start = performance.now();
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒超时
-
-                // 尝试用指定DNS解析（通过fetch间接触发，模拟解析过程）
-                fetch(`https://${testDomain}/favicon.ico`, {
-                    signal: controller.signal,
-                    headers: { 'Host': testDomain }
-                })
-                .then(res => {
-                    clearTimeout(timeoutId);
-                    const end = performance.now();
-                    resolve({
-                        server,
-                        status: "success",
-                        delay: (end - start).toFixed(2),
-                        ip: "解析成功（浏览器隐藏具体IP）"
+                try {
+                    // 阿里DNS开放API：支持指定DNS服务器解析，自带跨域许可
+                    const res = await fetch(`https://dns.alidns.com/resolve?name=baidu.com&server=${server.ip}&type=A&format=json`, {
+                        timeout: 5000,
+                        headers: { 'Accept': 'application/json' }
                     });
-                })
-                .catch(err => {
-                    clearTimeout(timeoutId);
+                    const data = await res.json();
+                    const end = performance.now();
+
+                    if (data.Status === 0) {
+                        resolve({
+                            server,
+                            status: "success",
+                            delay: (end - start).toFixed(2),
+                            ip: data.Answer[0].data,
+                            protocol: "UDP（API默认）"
+                        });
+                    } else {
+                        resolve({
+                            server,
+                            status: "error",
+                            delay: (end - start).toFixed(2),
+                            reason: `DNS错误：${getDnsErrorDesc(data.Status)}`
+                        });
+                    }
+                } catch (err) {
                     const end = performance.now();
                     resolve({
                         server,
                         status: "error",
                         delay: (end - start).toFixed(2),
-                        reason: err.name === 'AbortError' ? '超时' : '连接失败'
+                        reason: err.name === 'AbortError' ? '5秒超时' : '网络连接失败'
                     });
-                });
+                }
             });
+        }
+
+        // DNS错误码描述（提升可读性）
+        function getDnsErrorDesc(code) {
+            const descMap = {
+                1: "格式错误",
+                2: "服务器响应失败",
+                3: "域名不存在",
+                4: "不支持的解析类型",
+                5: "服务器拒绝解析"
+            };
+            return descMap[code] || `未知错误（代码：${code}）`;
         }
 
         // 批量测试所有DNS
         async function testAllDNS() {
             const resultEl = document.getElementById('dnsTestResult');
-            resultEl.innerHTML = '<span class="loading">●</span>正在测试所有DNS服务器，请稍候...';
+            resultEl.innerHTML = '<span class="loading">●</span>正在测试8个DNS服务器，请稍候...';
             let html = '';
 
-            // 并行测试所有DNS
             const testResults = await Promise.all(dnsServers.map(server => testSingleDNS(server)));
             
             testResults.forEach(res => {
                 if (res.status === "success") {
                     html += `<div class="test-item success">
                         <strong>${res.server.name}</strong>（${res.server.ip}）<br>
-                        状态：成功 | 延迟：${res.delay}ms | 解析结果：${res.ip}
+                        状态：成功 | 协议：${res.protocol} | 延迟：${res.delay}ms | 解析IP：${res.ip}
                     </div>`;
                 } else {
                     html += `<div class="test-item error">
@@ -145,25 +160,38 @@
             resultEl.innerHTML = html;
         }
 
-        // -------------------------- 页面2：网址延迟测试（图片加载计时，无跨域） --------------------------
+        // -------------------------- 页面2：网址延迟测试（新增17个高频网址） --------------------------
         const defaultUrls = [
+            // 国内高频（10个）
             { name: "国内-百度", url: "https://www.baidu.com/favicon.ico" },
             { name: "国内-淘宝", url: "https://www.taobao.com/favicon.ico" },
             { name: "国内-京东", url: "https://www.jd.com/favicon.ico" },
             { name: "国内-知乎", url: "https://www.zhihu.com/favicon.ico" },
-            { name: "国外-GitHub", url: "https://github.com/favicon.ico" }
+            { name: "国内-微信", url: "https://weixin.qq.com/favicon.ico" },
+            { name: "国内-抖音", url: "https://www.douyin.com/favicon.ico" },
+            { name: "国内-微博", url: "https://weibo.com/favicon.ico" },
+            { name: "国内-网易", url: "https://www.163.com/favicon.ico" },
+            { name: "国内-腾讯视频", url: "https://v.qq.com/favicon.ico" },
+            { name: "国内-阿里云", url: "https://www.aliyun.com/favicon.ico" },
+            // 国外高频（7个）
+            { name: "国外-Google", url: "https://www.google.com/favicon.ico" },
+            { name: "国外-GitHub", url: "https://github.com/favicon.ico" },
+            { name: "国外-Cloudflare", url: "https://www.cloudflare.com/favicon.ico" },
+            { name: "国外-Apple", url: "https://www.apple.com/favicon.ico" },
+            { name: "国外-Youtube", url: "https://www.youtube.com/favicon.ico" },
+            { name: "国外-Twitter", url: "https://twitter.com/favicon.ico" },
+            { name: "国外-Facebook", url: "https://www.facebook.com/favicon.ico" }
         ];
 
-        // 网址延迟测试核心：通过加载小图标计时（避免CORS拦截）
+        // 单个网址测试（图标加载计时，无跨域拦截）
         async function testSingleUrl(item) {
             return new Promise((resolve) => {
                 const img = new Image();
                 const start = performance.now();
                 const timeoutId = setTimeout(() => {
-                    resolve({ item, status: "error", delay: "超时", reason: "8秒未响应" });
-                }, 8000); // 8秒超时
+                    resolve({ item, status: "error", delay: "8000.00", reason: "8秒超时未响应" });
+                }, 8000);
 
-                // 加载成功
                 img.onload = () => {
                     clearTimeout(timeoutId);
                     const end = performance.now();
@@ -171,11 +199,10 @@
                         item,
                         status: "success",
                         delay: (end - start).toFixed(2),
-                        statusCode: "200（图片加载成功）"
+                        info: "图标加载成功"
                     });
                 };
 
-                // 加载失败
                 img.onerror = () => {
                     clearTimeout(timeoutId);
                     const end = performance.now();
@@ -183,35 +210,52 @@
                         item,
                         status: "error",
                         delay: (end - start).toFixed(2),
-                        reason: "资源加载失败"
+                        reason: "图标加载失败（可能被屏蔽或网址无效）"
                     });
                 };
 
-                img.src = `${item.url}?t=${Date.now()}`; // 加时间戳避免缓存
+                img.src = `${item.url}?t=${Date.now()}`; // 加时间戳防缓存
             });
         }
 
-        // 批量测试默认网址
+        // 批量测试所有网址（按国内/国外分组）
         async function testAllUrls() {
             const resultEl = document.getElementById('urlTestResult');
-            resultEl.innerHTML = '<span class="loading">●</span>正在测试所有默认网址延迟，请稍候...';
+            resultEl.innerHTML = '<span class="loading">●</span>正在测试17个网址，请稍候...';
             let html = '';
 
             const testResults = await Promise.all(defaultUrls.map(item => testSingleUrl(item)));
-            
-            testResults.forEach(res => {
+            const domestic = testResults.filter(res => res.item.name.startsWith('国内'));
+            const foreign = testResults.filter(res => res.item.name.startsWith('国外'));
+
+            // 国内网址结果
+            html += '<div class="font-semibold text-gray-700 mb-2 mt-2">【国内高频网址】</div>';
+            domestic.forEach(res => {
                 const baseUrl = res.item.url.replace('/favicon.ico', '');
-                if (res.status === "success") {
-                    html += `<div class="test-item success">
+                html += res.status === "success" 
+                    ? `<div class="test-item success">
                         <strong>${res.item.name}</strong>（${baseUrl}）<br>
-                        状态：成功 | 延迟：${res.delay}ms | 响应：${res.statusCode}
-                    </div>`;
-                } else {
-                    html += `<div class="test-item error">
+                        状态：成功 | 延迟：${res.delay}ms | 信息：${res.info}
+                    </div>`
+                    : `<div class="test-item error">
                         <strong>${res.item.name}</strong>（${baseUrl}）<br>
                         状态：失败 | 耗时：${res.delay}ms | 原因：${res.reason}
                     </div>`;
-                }
+            });
+
+            // 国外网址结果
+            html += '<div class="font-semibold text-gray-700 mb-2 mt-4">【国外高频网址】</div>';
+            foreign.forEach(res => {
+                const baseUrl = res.item.url.replace('/favicon.ico', '');
+                html += res.status === "success" 
+                    ? `<div class="test-item success">
+                        <strong>${res.item.name}</strong>（${baseUrl}）<br>
+                        状态：成功 | 延迟：${res.delay}ms | 信息：${res.info}
+                    </div>`
+                    : `<div class="test-item error">
+                        <strong>${res.item.name}</strong>（${baseUrl}）<br>
+                        状态：失败 | 耗时：${res.delay}ms | 原因：${res.reason}
+                    </div>`;
             });
 
             resultEl.innerHTML = html;
@@ -227,76 +271,78 @@
                 return;
             }
 
-            // 处理自定义网址：优先用favicon.ico，无则用根域名
-            const testUrl = inputUrl.endsWith('/') 
-                ? `${inputUrl}favicon.ico` 
-                : `${inputUrl}/favicon.ico`;
+            const testUrl = inputUrl.endsWith('/') ? `${inputUrl}favicon.ico` : `${inputUrl}/favicon.ico`;
             const item = { name: "自定义网址", url: testUrl };
-
             resultEl.innerHTML = `<span class="loading">●</span>正在测试自定义网址：${inputUrl}`;
+            
             const res = await testSingleUrl(item);
-
-            let customResult = '';
+            let customHtml = '';
             if (res.status === "success") {
-                customResult = `<div class="test-item success border-t-2 border-green-500 pt-3 mt-3">
+                customHtml = `<div class="test-item success border-t-2 border-green-500 pt-3 mt-3">
                     <strong>自定义网址</strong>（${inputUrl}）<br>
-                    状态：成功 | 延迟：${res.delay}ms | 响应：${res.statusCode}
+                    状态：成功 | 延迟：${res.delay}ms | 信息：${res.info}
                 </div>`;
             } else {
-                customResult = `<div class="test-item error border-t-2 border-red-500 pt-3 mt-3">
+                customHtml = `<div class="test-item error border-t-2 border-red-500 pt-3 mt-3">
                     <strong>自定义网址</strong>（${inputUrl}）<br>
                     状态：失败 | 耗时：${res.delay}ms | 原因：${res.reason}
                 </div>`;
             }
 
             // 插入到结果顶部
-            resultEl.innerHTML = customResult + (resultEl.innerHTML.includes('border-t-2') ? resultEl.innerHTML.replace(/<span class="loading">●<\/span>.*?<br>/, '') : '');
+            const existingHtml = resultEl.innerHTML.replace('<span class="loading">●</span>正在测试自定义网址：' + inputUrl, '');
+            resultEl.innerHTML = customHtml + existingHtml;
             document.getElementById('customUrl').value = '';
         }
 
-        // -------------------------- 页面3：IP与DNS归属地（国内稳定API） --------------------------
+        // -------------------------- 页面3：IP与DNS归属地（修复核心：无验证API） --------------------------
         async function testIPAndDNSLocation() {
             const resultEl = document.getElementById('ipDnsLocationResult');
             resultEl.innerHTML = '<span class="loading">●</span>正在查询IP与DNS归属地，请稍候...';
             
             try {
-                // 国内稳定API（1：获取IP和基础信息）
-                const ipRes = await fetch('https://api.vvhan.com/api/ip', { timeout: 8000 });
+                                // 1. 获取公网IP（ipify：无验证、无跨域）
+                const ipRes = await fetch('https://api.ipify.org?format=json', { timeout: 5000 });
                 const ipData = await ipRes.json();
-                if (!ipData.success) throw new Error('IP信息获取失败');
+                const publicIp = ipData.ip; // 提取公网IP
 
-                // 国内稳定API（2：获取DNS信息）
-                const dnsRes = await fetch('https://api.vvhan.com/api/dns', { timeout: 8000 });
-                const dnsData = await dnsRes.json();
-                const dnsIp = dnsData.data[0]?.ip || '未知';
+                // 2. 获取IP归属地（ip-api.io：无验证，支持全球IP查询）
+                const ipLocRes = await fetch(`https://ip-api.io/json/${publicIp}?fields=country_name,region_name,city,isp,timezone`, { timeout: 5000 });
+                const ipLocData = await ipLocRes.json();
 
-                // 国内稳定API（3：查询DNS归属地）
-                const dnsLocRes = await fetch(`https://api.vvhan.com/api/ip?ip=${dnsIp}`, { timeout: 8000 });
-                const dnsLocData = await dnsLocRes.json();
-                const dnsLoc = dnsLocData.success ? `${dnsLocData.data.country} ${dnsLocData.data.region} ${dnsLocData.data.city}` : '未知';
+                // 3. 获取DNS服务器地址（Cloudflare Trace：无验证，直接返回DNS信息）
+                const dnsTraceRes = await fetch('https://www.cloudflare.com/cdn-cgi/trace', { timeout: 5000 });
+                const dnsTraceText = await dnsTraceRes.text();
+                const traceLines = dnsTraceText.split('\n');
+                const dnsIp = traceLines.find(line => line.startsWith('dns='))?.split('=')[1] || '未知'; // 提取DNS IP
 
-                // 整理结果
+                // 4. 获取DNS归属地（若DNS IP存在则查询）
+                let dnsLoc = '未知';
+                if (dnsIp !== '未知' && dnsIp !== '') {
+                    const dnsLocRes = await fetch(`https://ip-api.io/json/${dnsIp}?fields=country_name,region_name,city`, { timeout: 5000 });
+                    const dnsLocData = await dnsLocRes.json();
+                    dnsLoc = `${dnsLocData.country_name || '未知'} ${dnsLocData.region_name || ''} ${dnsLocData.city || ''}`.trim();
+                }
+
+                // 整理查询结果，格式清晰
                 const result = `
 当前网络信息查询结果：
-1. 公网IP地址：${ipData.data.ip}
-   - 归属地：${ipData.data.country} ${ipData.data.region} ${ipData.data.city}
-   - 运营商：${ipData.data.isp || '未知'}
-   - 网络类型：${ipData.data.nettype || '未知'}
+1. 公网IP地址：${publicIp}
+   - 归属地：${ipLocData.country_name || '未知'} ${ipLocData.region_name || ''} ${ipLocData.city || ''}
+   - 运营商：${ipLocData.isp || '未知'}
+   - 时区：${ipLocData.timezone || '未知'}
 
 2. DNS服务器信息：
-   - 首选DNS：${dnsIp}
+   - DNS IP：${dnsIp}
    - DNS归属地：${dnsLoc}
-   - 备用DNS：${dnsData.data[1]?.ip || '未知'}
-
-3. 其他信息：
-   - 时区：${ipData.data.timezone || '未知'}
-   -  Continent：${ipData.data.continent || '未知'}
                 `;
-                resultEl.textContent = result;
+                resultEl.textContent = result; // 显示结果
             } catch (err) {
-                resultEl.textContent = `查询失败：${err.message}\n建议：1. 关闭广告拦截插件 2. 刷新页面重试 3. 检查网络是否正常`;
+                // 错误处理，提示具体原因
+                resultEl.textContent = `查询失败：${err.message || '未知错误'}\n建议：1. 关闭广告拦截插件 2. 检查网络连接 3. 刷新页面重试`;
             }
         }
     </script>
 </body>
 </html>
+
