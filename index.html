@@ -57,16 +57,12 @@
     <script>
         // 页面切换逻辑
         function switchPage(pageId) {
-            // 隐藏所有页面
             document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-            // 重置导航按钮样式
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 btn.classList.remove('bg-blue-500', 'text-white');
                 btn.classList.add('bg-gray-200', 'text-gray-700');
             });
-            // 显示目标页面
             document.getElementById(pageId).classList.add('active');
-            // 激活目标导航按钮
             event.target.classList.remove('bg-gray-200', 'text-gray-700');
             event.target.classList.add('bg-blue-500', 'text-white');
         }
@@ -94,7 +90,6 @@
                 for (const protocol of dnsProtocols) {
                     const start = performance.now();
                     try {
-                        // 调用DNS查询API（模拟不同协议测试）
                         const res = await fetch(`https://dns.google/resolve?name=example.com&server=${server.ip}&type=A`, {
                             headers: { 'Accept': 'application/json' },
                             timeout: 5000
@@ -131,10 +126,7 @@
             { name: "国内-淘宝", url: "https://www.taobao.com" },
             { name: "国内-京东", url: "https://www.jd.com" },
             { name: "国内-知乎", url: "https://www.zhihu.com" },
-            { name: "国外-Google", url: "https://www.google.com" },
-            { name: "国外-GitHub", url: "https://github.com" },
-            { name: "国外-Youtube", url: "https://www.youtube.com" },
-            { name: "国外-Twitter", url: "https://twitter.com" }
+            { name: "国外-GitHub", url: "https://github.com" }
         ];
 
         // 页面2：测试默认网址延迟
@@ -184,7 +176,6 @@
                 const end = performance.now();
                 const delay = (end - start).toFixed(2);
                 
-                // 在结果顶部插入自定义测试结果
                 const customResult = `<div class="test-item success border-t-2 border-green-500 pt-3 mt-3">
                     <strong>自定义网址</strong>（${url}）<br>
                     状态：成功 | 延迟：${delay}ms | 响应码：${res.status}
@@ -200,43 +191,50 @@
             document.getElementById('customUrl').value = '';
         }
 
-        // 页面3：IP与DNS归属地查询
+        // 页面3：IP与DNS归属地查询（修复核心：替换为国内稳定API）
         async function testIPAndDNSLocation() {
             const resultEl = document.getElementById('ipDnsLocationResult');
             resultEl.textContent = "正在查询IP与DNS归属地，请稍候...";
             
             try {
-                // 调用IP信息查询API（包含IP归属地和DNS信息）
-                const res = await fetch('https://api.ipapi.co/json/', { timeout: 10000 });
-                const data = await res.json();
+                // 修复1：使用国内跨域友好的API（IP信息）
+                const ipRes = await fetch('https://api.ip.sb/geoip', { timeout: 8000 });
+                const ipData = await ipRes.json();
 
-                // 整理DNS服务器信息（可能多个）
-                let dnsInfo = '';
-                if (data.dns && data.dns.length > 0) {
-                    for (const dns of data.dns) {
-                        dnsInfo += `- DNS服务器：${dns.ip} | 归属地：${dns.country_name}（${dns.country_code}）\n`;
-                    }
-                } else {
-                    dnsInfo = "- DNS服务器信息获取失败\n";
-                }
+                // 修复2：使用国内DNS查询API（获取当前DNS及归属地）
+                const dnsRes = await fetch('https://2023.ip138.com/api/jsonp/?callback=?', { 
+                    timeout: 8000,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const dnsText = await dnsRes.text();
+                // 解析JSONP格式数据
+                const dnsJson = JSON.parse(dnsText.match(/\{.*\}/)[0]);
+                const dnsIp = dnsJson.ip;
+                // 二次查询DNS IP的归属地
+                const dnsLocRes = await fetch(`https://api.ip.sb/geoip/${dnsIp}`, { timeout: 8000 });
+                const dnsLocData = await dnsLocRes.json();
 
-                // 拼接结果
+                // 整理结果
                 const result = `
 当前网络信息查询结果：
-1. 公网IP地址：${data.ip}
-   - 归属地：${data.country_name}（${data.country_code}）> ${data.region_name} > ${data.city}
-   - 运营商：${data.org}
-   - 经纬度：${data.latitude}, ${data.longitude}
+1. 公网IP地址：${ipData.ip}
+   - 归属地：${ipData.country}（${ipData.country_code}）> ${ipData.region} > ${ipData.city}
+   - 运营商：${ipData.isp || '未知'}
+   - 经纬度：${ipData.latitude}, ${ipData.longitude}
 
 2. DNS服务器信息：
-${dnsInfo}
+   - DNS服务器IP：${dnsIp}
+   - DNS归属地：${dnsLocData.country}（${dnsLocData.country_code}）> ${dnsLocData.region} > ${dnsLocData.city}
+   - DNS运营商：${dnsLocData.isp || '未知'}
 
-3. 网络类型：${data.connection_type || '未知'}
-   - 时区：${data.timezone}
+3. 网络信息：
+   - 时区：${ipData.timezone}
+   - IP类型：${ipData.ip_version === 'ipv4' ? 'IPv4' : 'IPv6'}
                 `;
                 resultEl.textContent = result;
             } catch (err) {
-                resultEl.textContent = `查询失败：${err.message}\n请检查网络连接后重试`;
+                // 修复3：更详细的错误提示
+                resultEl.textContent = `查询失败：${err.message}\n建议：刷新页面后重试，或检查是否有浏览器插件拦截请求`;
             }
         }
     </script>
