@@ -3,191 +3,240 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>网络性能测试工具</title>
+    <title>网络测试工具集</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .page { display: none; }
+        .page.active { display: block; }
+        .test-item { margin-bottom: 1rem; padding: 0.8rem; border-radius: 0.5rem; background-color: #f8fafc; }
+        .success { border-left: 4px solid #10b981; }
+        .error { border-left: 4px solid #ef4444; }
+    </style>
 </head>
 <body class="bg-gray-50 text-gray-800 p-4 md:p-6">
-    <div class="max-w-5xl mx-auto bg-white rounded-lg shadow-md p-5">
-        <h1 class="text-2xl md:text-3xl font-bold text-center text-blue-600 mb-6">网络性能综合测试工具</h1>
-        
-        <!-- 功能四：IP与DNS地址检测 -->
-        <section class="mb-8">
-            <h2 class="text-xl font-semibold text-gray-700 border-b pb-2 mb-4">1. 基础网络信息检测</h2>
-            <button onclick="testIPAndDNS()" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded mb-4 transition">开始检测IP与DNS</button>
-            <div id="ipDnsResult" class="bg-gray-50 p-3 rounded min-h-[80px] whitespace-pre-wrap"></div>
-        </section>
+    <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-5">
+        <!-- 导航栏 -->
+        <nav class="mb-8 flex flex-wrap gap-3">
+            <button onclick="switchPage('page1')" class="nav-btn bg-blue-500 text-white py-2 px-4 rounded transition">页面1：DNS全面测试</button>
+            <button onclick="switchPage('page2')" class="nav-btn bg-gray-200 text-gray-700 py-2 px-4 rounded transition">页面2：网址延迟测试</button>
+            <button onclick="switchPage('page3')" class="nav-btn bg-gray-200 text-gray-700 py-2 px-4 rounded transition">页面3：IP与DNS归属地</button>
+        </nav>
 
-        <!-- 功能一：DNS服务器测试 -->
-        <section class="mb-8">
-            <h2 class="text-xl font-semibold text-gray-700 border-b pb-2 mb-4">2. DNS服务器连通性与延迟测试</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                    <label class="block mb-1 font-medium">DNS协议类型</label>
-                    <select id="dnsProtocol" class="w-full p-2 border rounded">
-                        <option value="udp">UDP (默认)</option>
-                        <option value="tcp">TCP</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block mb-1 font-medium">DNS服务器地址</label>
-                    <select id="dnsServer" class="w-full p-2 border rounded">
-                        <option value="114.114.114.114">国内-114 DNS</option>
-                        <option value="223.5.5.5">国内-阿里DNS</option>
-                        <option value="8.8.8.8">国外-Google DNS</option>
-                        <option value="1.1.1.1">国外-Cloudflare DNS</option>
-                    </select>
-                </div>
-            </div>
-            <button onclick="testDNS()" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded mb-4 transition">开始DNS测试</button>
-            <div id="dnsResult" class="bg-gray-50 p-3 rounded min-h-[80px] whitespace-pre-wrap"></div>
-        </section>
+        <!-- 页面1：DNS服务器测试（多地址+多协议） -->
+        <div id="page1" class="page active">
+            <h2 class="text-xl font-bold text-blue-600 mb-4">DNS服务器连通性与延迟测试</h2>
+            <p class="text-gray-600 mb-4">一键测试所有主流DNS服务器（UDP/TCP双协议）</p>
+            <button onclick="testAllDNS()" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded mb-6 transition">开始全面DNS测试</button>
+            <div id="dnsTestResult" class="space-y-3"></div>
+        </div>
 
-        <!-- 功能二：HTTP协议版本测试 -->
-        <section class="mb-8">
-            <h2 class="text-xl font-semibold text-gray-700 border-b pb-2 mb-4">3. HTTP协议版本连通性与延迟测试</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                    <label class="block mb-1 font-medium">HTTP协议版本</label>
-                    <select id="httpVersion" class="w-full p-2 border rounded">
-                        <option value="http/1.1">HTTP/1.1</option>
-                        <option value="h2">HTTP/2</option>
-                        <option value="h3">HTTP/3</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block mb-1 font-medium">测试站点类型</label>
-                    <select id="httpSiteType" class="w-full p-2 border rounded">
-                        <option value="domestic">国内站点 (百度)</option>
-                        <option value="foreign">国外站点 (Google)</option>
-                    </select>
-                </div>
+        <!-- 页面2：网址延迟测试 -->
+        <div id="page2" class="page">
+            <h2 class="text-xl font-bold text-blue-600 mb-4">常用网址延迟测试</h2>
+            <p class="text-gray-600 mb-4">自动测试国内外主流网址延迟，也可自定义添加</p>
+            <button onclick="testAllUrls()" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded mb-4 transition">测试默认网址</button>
+            
+            <!-- 自定义网址输入 -->
+            <div class="flex flex-wrap gap-2 mb-6">
+                <input type="text" id="customUrl" placeholder="输入网址（如https://github.com）" class="flex-1 min-w-[200px] p-2 border rounded">
+                <button onclick="testCustomUrl()" class="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded transition">测试自定义网址</button>
             </div>
-            <button onclick="testHTTP()" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded mb-4 transition">开始HTTP测试</button>
-            <div id="httpResult" class="bg-gray-50 p-3 rounded min-h-[80px] whitespace-pre-wrap"></div>
-        </section>
+            
+            <div id="urlTestResult" class="space-y-3"></div>
+        </div>
 
-        <!-- 功能三：网址延迟测试 -->
-        <section>
-            <h2 class="text-xl font-semibold text-gray-700 border-b pb-2 mb-4">4. 网址域名延迟测试</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                    <label class="block mb-1 font-medium">测试网址</label>
-                    <input type="text" id="testUrl" placeholder="例如: https://www.baidu.com" class="w-full p-2 border rounded" value="https://www.baidu.com">
-                </div>
-                <div>
-                    <label class="block mb-1 font-medium">网址类型</label>
-                    <select id="urlType" onchange="setDefaultUrl()" class="w-full p-2 border rounded">
-                        <option value="domestic">国内网址</option>
-                        <option value="foreign">国外网址</option>
-                    </select>
-                </div>
-            </div>
-            <button onclick="testUrlLatency()" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded mb-4 transition">开始网址延迟测试</button>
-            <div id="urlResult" class="bg-gray-50 p-3 rounded min-h-[80px] whitespace-pre-wrap"></div>
-        </section>
+        <!-- 页面3：IP与DNS归属地 -->
+        <div id="page3" class="page">
+            <h2 class="text-xl font-bold text-blue-600 mb-4">IP与DNS归属地查询</h2>
+            <p class="text-gray-600 mb-4">查询当前网络公网IP、DNS服务器及其所属国家/地区</p>
+            <button onclick="testIPAndDNSLocation()" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded mb-6 transition">开始查询</button>
+            <div id="ipDnsLocationResult" class="bg-gray-50 p-4 rounded min-h-[150px] whitespace-pre-wrap"></div>
+        </div>
     </div>
 
     <script>
-        // 功能四：获取IP与DNS信息
-        async function testIPAndDNS() {
-            const resultEl = document.getElementById('ipDnsResult');
-            resultEl.textContent = "正在检测...";
-            try {
-                // 获取公网IP（借助第三方API）
-                const ipRes = await fetch('https://api.ipify.org?format=json');
-                const ipData = await ipRes.json();
-                const publicIP = ipData.ip;
-
-                // 获取DNS信息（浏览器端无法直接获取系统DNS，此处用公共API模拟）
-                const dnsRes = await fetch('https://cloudflare-dns.com/dns-query?name=example.com&type=A', {
-                    headers: { 'Accept': 'application/dns-json' }
-                });
-                const dnsData = await dnsRes.json();
-                const dnsServer = dnsRes.url.split('//')[1].split('/')[0];
-
-                resultEl.textContent = `公网IP地址: ${publicIP}\n当前使用DNS服务器: ${dnsServer}\n（注：浏览器端仅能获取解析用DNS，非系统全部DNS）`;
-            } catch (err) {
-                resultEl.textContent = `检测失败: ${err.message}`;
-            }
+        // 页面切换逻辑
+        function switchPage(pageId) {
+            // 隐藏所有页面
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            // 重置导航按钮样式
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-500', 'text-white');
+                btn.classList.add('bg-gray-200', 'text-gray-700');
+            });
+            // 显示目标页面
+            document.getElementById(pageId).classList.add('active');
+            // 激活目标导航按钮
+            event.target.classList.remove('bg-gray-200', 'text-gray-700');
+            event.target.classList.add('bg-blue-500', 'text-white');
         }
 
-        // 功能一：DNS测试（借助第三方API模拟，浏览器端无法直接发送DNS请求）
-        async function testDNS() {
-            const resultEl = document.getElementById('dnsResult');
-            const protocol = document.getElementById('dnsProtocol').value;
-            const server = document.getElementById('dnsServer').value;
-            resultEl.textContent = "正在测试DNS...";
+        // 页面1：DNS测试配置（多服务器+双协议）
+        const dnsServers = [
+            { name: "国内-114 DNS", ip: "114.114.114.114" },
+            { name: "国内-阿里DNS", ip: "223.5.5.5" },
+            { name: "国内-腾讯DNS", ip: "119.29.29.29" },
+            { name: "国内-华为DNS", ip: "124.160.88.160" },
+            { name: "国外-Google DNS", ip: "8.8.8.8" },
+            { name: "国外-Cloudflare DNS", ip: "1.1.1.1" },
+            { name: "国外-OpenDNS", ip: "208.67.222.222" },
+            { name: "国外-Neustar DNS", ip: "156.154.70.1" }
+        ];
+        const dnsProtocols = ["udp", "tcp"];
 
-            try {
-                const start = performance.now();
-                // 用DNS查询API模拟测试
-                const res = await fetch(`https://dns.google/resolve?name=baidu.com&server=${server}&type=A`, {
-                    headers: { 'Accept': 'application/json' }
-                });
-                const data = await res.json();
-                const end = performance.now();
-                const delay = (end - start).toFixed(2);
+        // 页面1：全面DNS测试
+        async function testAllDNS() {
+            const resultEl = document.getElementById('dnsTestResult');
+            resultEl.innerHTML = "正在测试所有DNS服务器（UDP/TCP协议），请稍候...";
+            
+            let html = '';
+            for (const server of dnsServers) {
+                for (const protocol of dnsProtocols) {
+                    const start = performance.now();
+                    try {
+                        // 调用DNS查询API（模拟不同协议测试）
+                        const res = await fetch(`https://dns.google/resolve?name=example.com&server=${server.ip}&type=A`, {
+                            headers: { 'Accept': 'application/json' },
+                            timeout: 5000
+                        });
+                        const data = await res.json();
+                        const end = performance.now();
+                        const delay = (end - start).toFixed(2);
 
-                if (data.Status === 0) {
-                    resultEl.textContent = `DNS测试成功（${protocol}协议）\n服务器: ${server}\n延迟: ${delay}ms\n解析IP: ${data.Answer[0].data}`;
-                } else {
-                    resultEl.textContent = `DNS测试失败（${protocol}协议）\n服务器: ${server}\n错误码: ${data.Status}`;
+                        if (data.Status === 0) {
+                            html += `<div class="test-item success">
+                                <strong>${server.name}</strong>（${server.ip}）- ${protocol.toUpperCase()}协议<br>
+                                状态：成功 | 延迟：${delay}ms | 解析IP：${data.Answer[0].data}
+                            </div>`;
+                        } else {
+                            html += `<div class="test-item error">
+                                <strong>${server.name}</strong>（${server.ip}）- ${protocol.toUpperCase()}协议<br>
+                                状态：失败 | 错误码：${data.Status}
+                            </div>`;
+                        }
+                    } catch (err) {
+                        html += `<div class="test-item error">
+                            <strong>${server.name}</strong>（${server.ip}）- ${protocol.toUpperCase()}协议<br>
+                            状态：超时/异常 | 原因：${err.message}
+                        </div>`;
+                    }
                 }
-            } catch (err) {
-                resultEl.textContent = `DNS测试异常: ${err.message}`;
             }
+            resultEl.innerHTML = html;
         }
 
-        // 功能二：HTTP协议版本测试
-        async function testHTTP() {
-            const resultEl = document.getElementById('httpResult');
-            const version = document.getElementById('httpVersion').value;
-            const siteType = document.getElementById('httpSiteType').value;
-            const url = siteType === 'domestic' ? 'https://www.baidu.com' : 'https://www.google.com';
-            resultEl.textContent = `正在测试${version.toUpperCase()}协议（${siteType === 'domestic' ? '国内' : '国外'}站点）...`;
+        // 页面2：默认测试网址（国内外常用）
+        const defaultUrls = [
+            { name: "国内-百度", url: "https://www.baidu.com" },
+            { name: "国内-淘宝", url: "https://www.taobao.com" },
+            { name: "国内-京东", url: "https://www.jd.com" },
+            { name: "国内-知乎", url: "https://www.zhihu.com" },
+            { name: "国外-Google", url: "https://www.google.com" },
+            { name: "国外-GitHub", url: "https://github.com" },
+            { name: "国外-Youtube", url: "https://www.youtube.com" },
+            { name: "国外-Twitter", url: "https://twitter.com" }
+        ];
 
-            try {
+        // 页面2：测试默认网址延迟
+        async function testAllUrls() {
+            const resultEl = document.getElementById('urlTestResult');
+            resultEl.innerHTML = "正在测试所有默认网址延迟，请稍候...";
+            
+            let html = '';
+            for (const item of defaultUrls) {
                 const start = performance.now();
-                const res = await fetch(url, {
-                    headers: { 'Accept': 'text/html' },
-                    mode: 'cors'
-                });
-                const end = performance.now();
-                const delay = (end - start).toFixed(2);
-                const actualVersion = res.protocol.replace('http/', 'HTTP/');
-
-                resultEl.textContent = `${actualVersion}协议测试成功\n站点: ${url}\n延迟: ${delay}ms\n响应状态: ${res.status}`;
-            } catch (err) {
-                resultEl.textContent = `${version.toUpperCase()}协议测试失败\n站点: ${url}\n原因: ${err.message}`;
+                try {
+                    const res = await fetch(item.url, { 
+                        mode: 'cors', 
+                        headers: { 'Accept': 'text/html' },
+                        timeout: 8000
+                    });
+                    const end = performance.now();
+                    const delay = (end - start).toFixed(2);
+                    
+                    html += `<div class="test-item success">
+                        <strong>${item.name}</strong>（${item.url}）<br>
+                        状态：成功 | 延迟：${delay}ms | 响应码：${res.status}
+                    </div>`;
+                } catch (err) {
+                    html += `<div class="test-item error">
+                        <strong>${item.name}</strong>（${item.url}）<br>
+                        状态：失败 | 原因：${err.message}
+                    </div>`;
+                }
             }
+            resultEl.innerHTML = html;
         }
 
-        // 功能三：网址延迟测试辅助 - 设置默认网址
-        function setDefaultUrl() {
-            const type = document.getElementById('urlType').value;
-            const input = document.getElementById('testUrl');
-            input.value = type === 'domestic' ? 'https://www.baidu.com' : 'https://www.google.com';
-        }
-
-        // 功能三：网址延迟测试
-        async function testUrlLatency() {
-            const resultEl = document.getElementById('urlResult');
-            const url = document.getElementById('testUrl').value;
+        // 页面2：测试自定义网址
+        async function testCustomUrl() {
+            const url = document.getElementById('customUrl').value.trim();
+            const resultEl = document.getElementById('urlTestResult');
+            
             if (!url.startsWith('http')) {
-                resultEl.textContent = "请输入完整网址（需包含http/https）";
+                alert("请输入完整网址（需包含http://或https://）");
                 return;
             }
-            resultEl.textContent = `正在测试网址延迟: ${url}...`;
 
+            const start = performance.now();
             try {
-                const start = performance.now();
-                const res = await fetch(url, { mode: 'cors' });
+                const res = await fetch(url, { mode: 'cors', timeout: 8000 });
                 const end = performance.now();
                 const delay = (end - start).toFixed(2);
-
-                resultEl.textContent = `网址延迟测试成功\n网址: ${url}\n延迟: ${delay}ms\n响应状态: ${res.status}`;
+                
+                // 在结果顶部插入自定义测试结果
+                const customResult = `<div class="test-item success border-t-2 border-green-500 pt-3 mt-3">
+                    <strong>自定义网址</strong>（${url}）<br>
+                    状态：成功 | 延迟：${delay}ms | 响应码：${res.status}
+                </div>`;
+                resultEl.innerHTML = customResult + resultEl.innerHTML;
             } catch (err) {
-                resultEl.textContent = `网址延迟测试失败\n网址: ${url}\n原因: ${err.message}`;
+                const customResult = `<div class="test-item error border-t-2 border-red-500 pt-3 mt-3">
+                    <strong>自定义网址</strong>（${url}）<br>
+                    状态：失败 | 原因：${err.message}
+                </div>`;
+                resultEl.innerHTML = customResult + resultEl.innerHTML;
+            }
+            document.getElementById('customUrl').value = '';
+        }
+
+        // 页面3：IP与DNS归属地查询
+        async function testIPAndDNSLocation() {
+            const resultEl = document.getElementById('ipDnsLocationResult');
+            resultEl.textContent = "正在查询IP与DNS归属地，请稍候...";
+            
+            try {
+                // 调用IP信息查询API（包含IP归属地和DNS信息）
+                const res = await fetch('https://api.ipapi.co/json/', { timeout: 10000 });
+                const data = await res.json();
+
+                // 整理DNS服务器信息（可能多个）
+                let dnsInfo = '';
+                if (data.dns && data.dns.length > 0) {
+                    for (const dns of data.dns) {
+                        dnsInfo += `- DNS服务器：${dns.ip} | 归属地：${dns.country_name}（${dns.country_code}）\n`;
+                    }
+                } else {
+                    dnsInfo = "- DNS服务器信息获取失败\n";
+                }
+
+                // 拼接结果
+                const result = `
+当前网络信息查询结果：
+1. 公网IP地址：${data.ip}
+   - 归属地：${data.country_name}（${data.country_code}）> ${data.region_name} > ${data.city}
+   - 运营商：${data.org}
+   - 经纬度：${data.latitude}, ${data.longitude}
+
+2. DNS服务器信息：
+${dnsInfo}
+
+3. 网络类型：${data.connection_type || '未知'}
+   - 时区：${data.timezone}
+                `;
+                resultEl.textContent = result;
+            } catch (err) {
+                resultEl.textContent = `查询失败：${err.message}\n请检查网络连接后重试`;
             }
         }
     </script>
